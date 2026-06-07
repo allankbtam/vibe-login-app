@@ -55,6 +55,12 @@ async function registerUser(event) {
     registerError.textContent = '';
     registerSuccess.textContent = '';
 
+    // Check supabase client is available
+    if (!supabase) {
+        registerError.textContent = 'Supabase client not initialized. Check console for details.';
+        return;
+    }
+
     // Validate: email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -133,6 +139,12 @@ async function loginUser(event) {
     // Clear previous messages
     loginError.textContent = '';
 
+    // Check supabase client is available
+    if (!supabase) {
+        loginError.textContent = 'Supabase client not initialized. Check console for details.';
+        return;
+    }
+
     console.log('Attempting login for:', email);
 
     try {
@@ -175,7 +187,9 @@ async function loginUser(event) {
  */
 async function logout() {
     try {
-        await supabase.auth.signOut();
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
     } catch (err) {
         console.error('Error during logout:', err);
     }
@@ -216,6 +230,12 @@ function showAuthCard() {
  * On page load, checks if there is an active Supabase session.
  */
 async function checkSession() {
+    if (!supabase) {
+        console.error('Cannot check session: Supabase client not initialized.');
+        showAuthCard();
+        return;
+    }
+
     try {
         const { data, error } = await supabase.auth.getSession();
 
@@ -236,14 +256,16 @@ async function checkSession() {
 /**
  * Listens for Supabase auth state changes (e.g., logout from another tab).
  */
-supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT') {
-        showAuthCard();
-    } else if (event === 'SIGNED_IN' && session) {
-        const displayName = session.user.email || session.user.id;
-        showDashboard(displayName);
-    }
-});
+if (supabase) {
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            showAuthCard();
+        } else if (event === 'SIGNED_IN' && session) {
+            const displayName = session.user.email || session.user.id;
+            showDashboard(displayName);
+        }
+    });
+}
 
 // ===== Event Listeners =====
 loginForm.addEventListener('submit', loginUser);

@@ -1,6 +1,6 @@
 /**
  * Hello World App - Authentication Logic
- * Uses browser localStorage for user registration, login, and session persistence.
+ * Uses Supabase Auth for real user registration, login, and session management.
  */
 
 // ===== DOM Elements =====
@@ -39,35 +39,16 @@ function switchTab(tab) {
     registerSuccess.textContent = '';
 }
 
-// ===== Helper: Get all registered users from localStorage =====
-/**
- * Retrieves the list of registered users from localStorage.
- * @returns {Array} Array of user objects
- */
-function getUsers() {
-    const users = localStorage.getItem('registeredUsers');
-    return users ? JSON.parse(users) : [];
-}
-
-// ===== Helper: Save users list to localStorage =====
-/**
- * Saves the list of registered users to localStorage.
- * @param {Array} users - Array of user objects
- */
-function saveUsers(users) {
-    localStorage.setItem('registeredUsers', JSON.stringify(users));
-}
-
 // ===== Register =====
 /**
- * Handles user registration.
- * Validates input, checks for duplicate usernames, and stores the new user.
+ * Handles user registration via Supabase Auth.
+ * Validates input, creates a new user, and stores additional data in the users table.
  * @param {Event} event - Form submit event
  */
-function registerUser(event) {
+async function registerUser(event) {
     event.preventDefault();
 
-    const username = document.getElementById('registerUsername').value.trim();
+    const email = document.getElementById('registerUsername').value.trim();
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('registerConfirmPassword').value;
 
@@ -76,8 +57,8 @@ function registerUser(event) {
     registerSuccess.textContent = '';
 
     // Validate: password length
-    if (password.length < 4) {
-        registerError.textContent = 'Password must be at least 4 characters long.';
+    if (password.length < 6) {
+        registerError.textContent = 'Password must be at least 6 characters long.';
         return;
     }
 
@@ -87,83 +68,122 @@ function registerUser(event) {
         return;
     }
 
-    // Check if username already exists
-    const users = getUsers();
-    const existingUser = users.find((user) => user.username.toLowerCase() === username.toLowerCase());
-
-    if (existingUser) {
-        registerError.textContent = 'Username is already taken. Please choose another.';
+    // Validate: email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        registerError.textContent = 'Please enter a valid email address.';
         return;
     }
 
-    // Create new user
-    const newUser = {
-        username: username,
-        password: password
-    };
+    try {
+        // Sign up with Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password
+        });
 
-    // Save user
-    users.push(newUser);
-    saveUsers(users);
+        if (error) {
+            if (error.message.includes('User already registered')) {
+                registerError.textContent = 'This email is already registered. Please login instead.';
+            } else {
+                registerError.textContent = error.message;
+            }
+            return;
+        }
 
-    // Show success message
-    registerSuccess.textContent = 'Account created successfully! You can now login.';
+        // If the user object was created, store additional data in the users table
+        if (data.user) {
+            const { error: insertError } = await supabase
+                .from('users')
+                .insert([{
+                    id: data.user.id,
+                    email: email,
+                    created_at: new Date().toISOString()
+                }]);
 
-    // Clear form fields
-    document.getElementById('registerUsername').value = '';
-    document.getElementById('registerPassword').value = '';
-    document.getElementById('registerConfirmPassword').value = '';
+            if (insertError) {
+                console.error('Error saving user data:', insertError);
+                // Continue anyway - auth is still successful
+            }
+        }
 
-    // Switch to login tab after a short delay
-    setTimeout(() => {
-        switchTab('login');
-    }, 1500);
+        // Show success message
+        registerSuccess.textContent = 'Account created successfully! You can now login.';
+
+        // Clear form fields
+        document.getElementById('registerUsername').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerConfirmPassword').value = '';
+
+        // Switch to login tab after a short delay
+        setTimeout(() => {
+            switchTab('login');
+        }, 1500);
+
+    } catch (err) {
+        registerError.textContent = 'An unexpected error occurred. Please try again.';
+        console.error(err);
+    }
 }
 
 // ===== Login =====
 /**
- * Handles user login.
- * Validates credentials and sets the active session.
+ * Handles user login via Supabase Auth.
+ * Validates credentials and shows the dashboard on success.
  * @param {Event} event - Form submit event
  */
-function loginUser(event) {
+async function loginUser(event) {
     event.preventDefault();
 
-    const username = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
 
     // Clear previous messages
     loginError.textContent = '';
 
-    // Get registered users
-    const users = getUsers();
+    try {
+        // Sign in with Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
 
-    // Find matching user
-    const foundUser = users.find(
-        (user) => user.username.toLowerCase() === username.toLowerCase() && user.password === password
-    );
+        if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+                loginError.textContent = 'Invalid email or password. Please try again.';
+            } else {
+                loginError.textContent = error.message;
+            }
+            return;
+        }
 
-    if (foundUser) {
-        // Store the logged-in username in sessionStorage for persistence across refreshes
-        localStorage.setItem('currentUser', foundUser.username);
-        showDashboard(foundUser.username);
-    } else {
-        loginError.textContent = 'Invalid username or password. Please try again.';
+        // Show dashboard with the user's email
+        if (data.user) {
+            const displayName = data.user.email || email;
+            showDashboard(displayName);
+        }
+
+        // Clear form fields
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+
+    } catch (err) {
+        loginError.textContent = 'An unexpected error occurred. Please try again.';
+        console.error(err);
     }
-
-    // Clear form fields
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
 }
 
 // ===== Logout =====
 /**
- * Handles user logout.
- * Clears the current session and shows the auth card.
+ * Handles user logout via Supabase Auth.
+ * Clears the session and shows the auth card.
  */
-function logout() {
-    // Remove current user from localStorage
-    localStorage.removeItem('currentUser');
+async function logout() {
+    try {
+        await supabase.auth.signOut();
+    } catch (err) {
+        console.error('Error during logout:', err);
+    }
 
     // Clear login error
     loginError.textContent = '';
@@ -179,10 +199,10 @@ function logout() {
 // ===== Show Dashboard =====
 /**
  * Displays the dashboard with the user's greeting.
- * @param {string} username - The logged-in user's username
+ * @param {string} name - The logged-in user's display name (email)
  */
-function showDashboard(username) {
-    displayUsername.textContent = username;
+function showDashboard(name) {
+    displayUsername.textContent = name;
     authCard.classList.add('hidden');
     dashboardCard.classList.remove('hidden');
 }
@@ -198,28 +218,38 @@ function showAuthCard() {
 
 // ===== Check Session on Page Load =====
 /**
- * On page load, checks if there is an active session in localStorage.
- * If a valid user exists, shows the dashboard; otherwise shows the auth card.
+ * On page load, checks if there is an active Supabase session.
+ * If a valid session exists, shows the dashboard; otherwise shows the auth card.
  */
-function checkSession() {
-    const currentUser = localStorage.getItem('currentUser');
+async function checkSession() {
+    try {
+        const { data, error } = await supabase.auth.getSession();
 
-    if (currentUser) {
-        // Verify the user still exists in registered users
-        const users = getUsers();
-        const validUser = users.find(
-            (user) => user.username.toLowerCase() === currentUser.toLowerCase()
-        );
-
-        if (validUser) {
-            showDashboard(validUser.username);
+        if (data && data.session && data.session.user) {
+            const displayName = data.session.user.email || data.session.user.id;
+            showDashboard(displayName);
             return;
         }
+    } catch (err) {
+        console.error('Error checking session:', err);
     }
 
     // No valid session, show auth card
     showAuthCard();
 }
+
+// ===== Listen for Auth State Changes =====
+/**
+ * Listens for Supabase auth state changes (e.g., logout from another tab).
+ */
+supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+        showAuthCard();
+    } else if (event === 'SIGNED_IN' && session) {
+        const displayName = session.user.email || session.user.id;
+        showDashboard(displayName);
+    }
+});
 
 // ===== Event Listeners =====
 loginForm.addEventListener('submit', loginUser);

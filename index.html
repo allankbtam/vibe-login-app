@@ -24,8 +24,8 @@
             <!-- Login Form -->
             <form class="auth-form" id="loginForm">
                 <div class="form-group">
-                    <label for="loginUsername">Username</label>
-                    <input type="text" id="loginUsername" placeholder="Enter your username" required autocomplete="username">
+                    <label for="loginUsername">Email</label>
+                    <input type="email" id="loginUsername" placeholder="Enter your email" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Password</label>
@@ -38,8 +38,8 @@
             <!-- Register Form -->
             <form class="auth-form hidden" id="registerForm">
                 <div class="form-group">
-                    <label for="registerUsername">Username</label>
-                    <input type="text" id="registerUsername" placeholder="Choose a username" required autocomplete="username">
+                    <label for="registerUsername">Email</label>
+                    <input type="email" id="registerUsername" placeholder="Enter your email" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="registerPassword">Password</label>
@@ -66,6 +66,11 @@
         </div>
     </div>
 
+    <!-- Supabase JS Client (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+    <!-- App Logic -->
     <script src="app.js"></script>
 </body>
 </html>

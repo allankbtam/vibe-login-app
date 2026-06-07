@@ -91,7 +91,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 6. Attach the trigger to the auth.users table
 CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT OF id, email, aud, role, email_confirmed_at, encrypted_password, last_password_updated, raw_app_meta_data, raw_user_meta_data, iss, aal, created_at, confirmed_at, last_sign_in_at, email_change, new_email, recovery_sent_at, new_email_change_confirmed_at, phone, phone_confirmed_at, banned_until, reauth_until, deleted_at, is_sso_user ON auth.users
+  AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 

@@ -1,7 +1,11 @@
 /**
  * Hello World App - Authentication Logic
  * Uses Supabase Auth for real user registration, login, and session management.
+ * ES Module - loaded with <script type="module">
  */
+
+// Get supabase client from window (set by inline module script in index.html)
+const supabase = window.supabase;
 
 // ===== DOM Elements =====
 const authCard = document.getElementById('authCard');
@@ -15,7 +19,7 @@ const registerError = document.getElementById('registerError');
 const registerSuccess = document.getElementById('registerSuccess');
 const displayUsername = document.getElementById('displayUsername');
 
-// ===== Tab Switching =====
+// ===== Expose functions to window for HTML onclick attributes =====
 /**
  * Switch between Login and Register forms
  * @param {string} tab - 'login' or 'register'
@@ -38,6 +42,7 @@ function switchTab(tab) {
     registerError.textContent = '';
     registerSuccess.textContent = '';
 }
+window.switchTab = switchTab;
 
 // ===== Register =====
 /**
@@ -204,6 +209,7 @@ async function logout() {
     // Reset to login tab
     switchTab('login');
 }
+window.logout = logout;
 
 // ===== Show Dashboard =====
 /**

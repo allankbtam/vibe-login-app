@@ -66,11 +66,18 @@
         </div>
     </div>
 
-    <!-- Supabase JS Client (CDN - UMD build for browser compatibility) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.min.js"></script>
-    <!-- Supabase Configuration -->
-    <script src="supabase-config.js"></script>
-    <!-- App Logic -->
-    <script src="app.js"></script>
+    <!-- Supabase Configuration (ES Module - imports from esm.sh CDN) -->
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        const SUPABASE_URL = 'https://stjxenrwjidgesvytggl.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable__yZuA6ecv6WUbIPRbdBhTA_4bji5JSY';
+
+        window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase client initialized successfully via ES module.');
+    </script>
+
+    <!-- App Logic (ES Module) -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>

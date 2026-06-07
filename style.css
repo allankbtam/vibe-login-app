@@ -1,0 +1,275 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* ===== App Container ===== */
+.app-container {
+    width: 100%;
+    max-width: 460px;
+}
+
+/* ===== Hidden Utility ===== */
+.hidden {
+    display: none !important;
+}
+
+/* ===== Auth Card ===== */
+.auth-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== Card Header ===== */
+.card-header {
+    text-align: center;
+    padding: 32px 32px 0;
+}
+
+.card-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+}
+
+.card-subtitle {
+    font-size: 14px;
+    color: #888;
+}
+
+/* ===== Tab Toggle ===== */
+.tab-toggle {
+    display: flex;
+    margin: 24px 32px 0;
+    background: #f0f0f5;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: #888;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    background: #ffffff;
+    color: #302b63;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-btn:hover:not(.active) {
+    color: #555;
+}
+
+/* ===== Auth Forms ===== */
+.auth-form {
+    padding: 24px 32px 32px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e0e0e8;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #333;
+    background: #fafafe;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-group input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+}
+
+.form-group input:focus {
+    border-color: #302b63;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(48, 43, 99, 0.1);
+}
+
+/* ===== Form Messages ===== */
+.form-error {
+    font-size: 13px;
+    color: #e74c3c;
+    min-height: 20px;
+    margin-bottom: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.form-success {
+    font-size: 13px;
+    color: #2ecc71;
+    min-height: 20px;
+    margin-bottom: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+/* ===== Auth Button ===== */
+.auth-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #302b63 0%, #24243e 100%);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+}
+
+.auth-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(48, 43, 99, 0.4);
+}
+
+.auth-btn:active {
+    transform: translateY(0);
+}
+
+/* ===== Dashboard Card ===== */
+.dashboard-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    padding: 48px 32px;
+    animation: slideUp 0.4s ease-out;
+}
+
+/* ===== Dashboard Content ===== */
+.dashboard-content {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.greeting-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+    animation: wave 1.5s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(20deg); }
+    75% { transform: rotate(-15deg); }
+}
+
+.greeting-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+
+.username-highlight {
+    background: linear-gradient(135deg, #302b63 0%, #6c63ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dashboard-subtitle {
+    font-size: 15px;
+    color: #888;
+    margin-bottom: 36px;
+    line-height: 1.6;
+}
+
+/* ===== Logout Button ===== */
+.logout-btn {
+    padding: 14px 48px;
+    border: 2px solid #e0e0e8;
+    border-radius: 10px;
+    background: transparent;
+    color: #555;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    border-color: #e74c3c;
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.05);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+    .card-header {
+        padding: 24px 20px 0;
+    }
+
+    .tab-toggle {
+        margin: 20px 20px 0;
+    }
+
+    .auth-form {
+        padding: 20px;
+    }
+
+    .dashboard-card {
+        padding: 36px 20px;
+    }
+
+    .greeting-title {
+        font-size: 26px;
+    }
+}

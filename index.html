@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Login/Register Card (shown when logged out) -->
+        <div class="auth-card" id="authCard">
+            <div class="card-header">
+                <h1>Welcome</h1>
+                <p class="card-subtitle">Sign in to continue</p>
+            </div>
+
+            <!-- Tab Toggle -->
+            <div class="tab-toggle">
+                <button class="tab-btn active" id="loginTab" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" id="registerTab" onclick="switchTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form" id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" placeholder="Enter your username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                <p class="form-error" id="loginError"></p>
+                <button type="submit" class="auth-btn">Login</button>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form hidden" id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" placeholder="Choose a username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" placeholder="Choose a password" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">Confirm Password</label>
+                    <input type="password" id="registerConfirmPassword" placeholder="Confirm your password" required autocomplete="new-password">
+                </div>
+                <p class="form-error" id="registerError"></p>
+                <p class="form-success" id="registerSuccess"></p>
+                <button type="submit" class="auth-btn">Register</button>
+            </form>
+        </div>
+
+        <!-- Dashboard (shown when logged in) -->
+        <div class="dashboard-card hidden" id="dashboardCard">
+            <div class="dashboard-content">
+                <div class="greeting-icon">👋</div>
+                <h1 class="greeting-title">Hello World, <span class="username-highlight" id="displayUsername"></span>!</h1>
+                <p class="dashboard-subtitle">You are successfully logged in. Welcome to your dashboard.</p>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

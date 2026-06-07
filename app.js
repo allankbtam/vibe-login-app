@@ -42,7 +42,6 @@ function switchTab(tab) {
 // ===== Register =====
 /**
  * Handles user registration via Supabase Auth.
- * Validates input, creates a new user, and stores additional data in the users table.
  * @param {Event} event - Form submit event
  */
 async function registerUser(event) {
@@ -56,6 +55,13 @@ async function registerUser(event) {
     registerError.textContent = '';
     registerSuccess.textContent = '';
 
+    // Validate: email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        registerError.textContent = 'Please enter a valid email address.';
+        return;
+    }
+
     // Validate: password length
     if (password.length < 6) {
         registerError.textContent = 'Password must be at least 6 characters long.';
@@ -68,12 +74,7 @@ async function registerUser(event) {
         return;
     }
 
-    // Validate: email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        registerError.textContent = 'Please enter a valid email address.';
-        return;
-    }
+    console.log('Attempting registration for:', email);
 
     try {
         // Sign up with Supabase Auth
@@ -81,6 +82,8 @@ async function registerUser(event) {
             email: email,
             password: password
         });
+
+        console.log('Supabase signUp response:', { data, error });
 
         if (error) {
             if (error.message.includes('User already registered')) {
@@ -91,20 +94,10 @@ async function registerUser(event) {
             return;
         }
 
-        // If the user object was created, store additional data in the users table
+        // User created successfully - data will be auto-inserted via database trigger
         if (data.user) {
-            const { error: insertError } = await supabase
-                .from('users')
-                .insert([{
-                    id: data.user.id,
-                    email: email,
-                    created_at: new Date().toISOString()
-                }]);
-
-            if (insertError) {
-                console.error('Error saving user data:', insertError);
-                // Continue anyway - auth is still successful
-            }
+            console.log('New user created with ID:', data.user.id);
+            console.log('User email:', data.user.email);
         }
 
         // Show success message
@@ -122,14 +115,13 @@ async function registerUser(event) {
 
     } catch (err) {
         registerError.textContent = 'An unexpected error occurred. Please try again.';
-        console.error(err);
+        console.error('Registration error:', err);
     }
 }
 
 // ===== Login =====
 /**
  * Handles user login via Supabase Auth.
- * Validates credentials and shows the dashboard on success.
  * @param {Event} event - Form submit event
  */
 async function loginUser(event) {
@@ -141,12 +133,16 @@ async function loginUser(event) {
     // Clear previous messages
     loginError.textContent = '';
 
+    console.log('Attempting login for:', email);
+
     try {
         // Sign in with Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
         });
+
+        console.log('Supabase signIn response:', { data, error });
 
         if (error) {
             if (error.message.includes('Invalid login credentials')) {
@@ -169,14 +165,13 @@ async function loginUser(event) {
 
     } catch (err) {
         loginError.textContent = 'An unexpected error occurred. Please try again.';
-        console.error(err);
+        console.error('Login error:', err);
     }
 }
 
 // ===== Logout =====
 /**
  * Handles user logout via Supabase Auth.
- * Clears the session and shows the auth card.
  */
 async function logout() {
     try {
@@ -219,7 +214,6 @@ function showAuthCard() {
 // ===== Check Session on Page Load =====
 /**
  * On page load, checks if there is an active Supabase session.
- * If a valid session exists, shows the dashboard; otherwise shows the auth card.
  */
 async function checkSession() {
     try {

@@ -50,35 +50,54 @@ const SUPABASE_URL = 'https://your-project-id.supabase.co';
 const SUPABASE_ANON_KEY = 'your-anon-key-here';
 ```
 
-### Step 4: Create the Users Table (Optional)
+### Step 4: Create the Users Table with Auto-Insert Trigger
 
-If you want to store additional user data, run this SQL in the Supabase Dashboard:
+The app uses a **database trigger** to automatically insert user data when they sign up. This is necessary because Supabase Auth requires email confirmation before the user is "authenticated", which would cause Row Level Security (RLS) to block manual inserts from the app.
 
 1. Go to **SQL Editor** in your Supabase Dashboard
 2. Run the following query:
 
 ```sql
+-- 1. Create the users table
 CREATE TABLE users (
   id UUID REFERENCES auth.users PRIMARY KEY,
   email TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Enable Row Level Security
+-- 2. Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Allow users to read their own data
+-- 3. Allow users to read their own data
 CREATE POLICY "Users can view own data"
   ON users FOR SELECT
   USING (auth.uid() = id);
 
--- Allow the auth system to insert new users
+-- 4. Allow the auth system to insert new users
 CREATE POLICY "Enable insert for authenticated users"
   ON users FOR INSERT
   WITH CHECK (auth.uid() = id);
+
+-- 5. Create a trigger function that auto-inserts into users table
+--    when a new user signs up via Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email)
+  VALUES (NEW.id, NEW.email);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Attach the trigger to the auth.users table
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT OF id, email, aud, role, email_confirmed_at, encrypted_password, last_password_updated, raw_app_meta_data, raw_user_meta_data, iss, aal, created_at, confirmed_at, last_sign_in_at, email_change, new_email, recovery_sent_at, new_email_change_confirmed_at, phone, phone_confirmed_at, banned_until, reauth_until, deleted_at, is_sso_user ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-> **Note:** The app will still work without this table (authentication is handled by Supabase Auth). The `users` table is optional for storing extra data.
+> **How it works:** When a user signs up, Supabase inserts a row into `auth.users`. The trigger fires automatically and inserts the user's ID and email into your `public.users` table. Since the trigger runs as `SECURITY DEFINER`, it bypasses RLS and always succeeds.
+
+> **Important:** You must run this SQL **before** users start signing up. Users who registered before the trigger was created will NOT have a row in the `users` table. You can manually backfill them if needed.
 
 ### Step 5: Run the App
 

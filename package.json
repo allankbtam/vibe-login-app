@@ -1,0 +1,28 @@
+{
+  "name": "vibe-login-app",
+  "version": "0.1.0",
+  "description": "A beautiful, modern login/registration web application powered by **Supabase** for real authentication and database storage.",
+  "main": "app.js",
+  "scripts": {
+    "test": "npx playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allankbtam/vibe-login-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/allankbtam/vibe-login-app/issues"
+  },
+  "homepage": "https://github.com/allankbtam/vibe-login-app#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "playwright": "^1.60.0",
+    "serve": "^14.2.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

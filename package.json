@@ -1,6 +1,6 @@
 {
   "name": "vibe-login-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A beautiful, modern login/registration web application powered by **Supabase** for real authentication and database storage.",
   "main": "app.js",
   "scripts": {

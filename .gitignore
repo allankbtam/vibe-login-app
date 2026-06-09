@@ -11,3 +11,6 @@ playwright/.cache/
 
 # IDE
 .vscode/
+
+# Supabase credentials (you create this locally)
+supabase-config.js

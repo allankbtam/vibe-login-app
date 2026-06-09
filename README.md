@@ -1,151 +1,172 @@
-# Hello World App - Supabase Authentication
+# Hello World App
 
-A beautiful, modern login/registration web application powered by **Supabase** for real authentication and database storage.
+A minimalist login/registration application built with vanilla HTML, CSS, and JavaScript, powered by Supabase for authentication and user management.
 
-## ✨ Features
+## Version
 
-- **Register** - Create a new account with email and password
-- **Login** - Sign in with your credentials
-- **Logout** - Secure session management
-- **Session Persistence** - Stay logged in across page refreshes
-- **Real-time Auth State** - Automatically syncs across browser tabs
-- **Beautiful UI** - Modern gradient design with smooth animations
+**Current Version: 0.2.0**
 
-## 📁 Project Structure
+## Features
 
-```
-├── index.html          # Main HTML structure (login, register, dashboard)
-├── style.css           # Styles and animations
-├── app.js              # Authentication logic with Supabase
-├── supabase-config.js  # Supabase client configuration
-└── README.md           # This file
-```
+- **Authentication**: Login and registration via Supabase Auth (email/password)
+- **User Profiles**: Stores `username` and `is_admin` in a `profiles` table
+- **Admin Panel**: Admins can view all users, toggle admin roles, and delete users
+- **Session Persistence**: Auto-restores session on page reload
+- **Real-time Auth State**: Reacts to sign-in/sign-out events
+- **Version Display**: App version shown in both auth card and dashboard footer
 
-## 🚀 Quick Start
+## Quick Start
 
-### Step 1: Create a Supabase Project
+### 1. Supabase Setup
 
-1. Go to [supabase.com](https://supabase.com) and sign up or log in
-2. Click **"New Project"**
-3. Fill in:
-   - **Organization**: Choose or create one
-   - **Name**: e.g., `hello-world-app`
-   - **Database Password**: Choose a strong password
-   - **Region**: Choose the closest region to your users
-4. Click **"Create new project"** and wait for it to initialize
-
-### Step 2: Get Your API Credentials
-
-1. In your Supabase Dashboard, go to **Project Settings** → **API**
-2. Copy the following:
-   - **Project URL** (e.g., `https://xxxxx.supabase.co`)
-   - **anon/public key** (starts with `eyJ...` or `sb_publishable_...`)
-
-### Step 3: Configure the App
-
-Open `supabase-config.js` and replace the placeholder values with your credentials:
-
-```js
-const SUPABASE_URL = 'https://your-project-id.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key-here';
-```
-
-### Step 4: Create the Users Table with Auto-Insert Trigger
-
-The app uses a **database trigger** to automatically insert user data when they sign up. This is necessary because Supabase Auth requires email confirmation before the user is "authenticated", which would cause Row Level Security (RLS) to block manual inserts from the app.
-
-1. Go to **SQL Editor** in your Supabase Dashboard
-2. Run the following query:
+1. Create a project at [supabase.com](https://supabase.com)
+2. In the SQL Editor, run the following to create the `profiles` table and a trigger to auto-create profiles on signup:
 
 ```sql
--- 1. Create the users table
-CREATE TABLE users (
-  id UUID REFERENCES auth.users PRIMARY KEY,
-  email TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+-- Create profiles table
+CREATE TABLE profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  email TEXT,
+  username TEXT,
+  is_admin BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. Enable Row Level Security
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- 3. Allow users to read their own data
-CREATE POLICY "Users can view own data"
-  ON users FOR SELECT
-  USING (auth.uid() = id);
+-- Policy: Allow authenticated users to read all profiles
+CREATE POLICY "Allow authenticated reads"
+  ON profiles FOR SELECT
+  TO authenticated
+  USING (true);
 
--- 4. Allow the auth system to insert new users
-CREATE POLICY "Enable insert for authenticated users"
-  ON users FOR INSERT
+-- Policy: Allow authenticated users to insert their own profile (used by trigger)
+CREATE POLICY "Allow profile insert"
+  ON profiles FOR INSERT
+  TO authenticated
   WITH CHECK (auth.uid() = id);
 
--- 5. Create a trigger function that auto-inserts into users table
---    when a new user signs up via Supabase Auth
+-- Policy: Allow authenticated users to update their own profile
+CREATE POLICY "Allow profile update"
+  ON profiles FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id);
+
+-- Policy: Allow authenticated users to delete profiles (admin use)
+CREATE POLICY "Allow profile delete"
+  ON profiles FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- Function: Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO public.users (id, email)
-  VALUES (NEW.id, NEW.email);
+  INSERT INTO public.profiles (id, email, username)
+  VALUES (NEW.id, NEW.email, split_part(NEW.email, '@', 1));
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
--- 6. Attach the trigger to the auth.users table
+-- Trigger: Call function on new user signup
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-> **How it works:** When a user signs up, Supabase inserts a row into `auth.users`. The trigger fires automatically and inserts the user's ID and email into your `public.users` table. Since the trigger runs as `SECURITY DEFINER`, it bypasses RLS and always succeeds.
+3. Make your first user an admin by running this manually (replace `<user-uuid>` with the actual user ID from the Supabase Auth page):
 
-> **Important:** You must run this SQL **before** users start signing up. Users who registered before the trigger was created will NOT have a row in the `users` table. You can manually backfill them if needed.
-
-### Step 5: Run the App
-
-Simply open `index.html` in your web browser. No build step or server required!
-
-For the best experience, you can use a local server:
-
-```bash
-# Using Python
-python3 -m http.server 3000
-
-# Using Node.js
-npx serve .
-
-# Then open http://localhost:3000
+```sql
+UPDATE profiles SET is_admin = TRUE WHERE id = '<user-uuid>';
 ```
 
-## 🔧 How It Works
+4. Copy your **Project URL** and **Anon Public Key** from Supabase Dashboard → Settings → API.
 
-| File | Purpose |
-|------|---------|
-| `index.html` | UI structure with login form, register form, and dashboard |
-| `style.css` | Modern gradient background, card layout, animations |
-| `supabase-config.js` | Initializes the Supabase client with your credentials |
-| `app.js` | Handles register, login, logout, session checks, and auth state changes |
+### 2. Local Setup
 
-## 📝 Authentication Flow
+1. Clone this repository:
+```bash
+git clone https://github.com/allankbtam/vibe-login-app.git
+cd vibe-login-app
+```
 
-1. **Register**: User enters email + password → Supabase creates the account → Optional: saves extra data to `users` table
-2. **Login**: User enters email + password → Supabase validates credentials → Shows dashboard
-3. **Session Check**: On page load, checks for an active Supabase session → Auto-logs in if valid
-4. **Logout**: Clears the Supabase session → Returns to login screen
+2. Create a `supabase-config.js` file (do NOT commit this — it's in `.gitignore`):
+```javascript
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+cjs';
 
-## 🌐 Deployment
+export const supabase = createClient(
+  'YOUR_SUPABASE_URL',
+  'YOUR_SUPABASE_ANON_KEY'
+);
 
-This is a static HTML/JS app, so it can be deployed anywhere:
+export const APP_VERSION = '0.2.0';
+```
 
-- **GitHub Pages** - Push to a repository and enable Pages
-- **Netlify** - Drag and drop the folder
-- **Vercel** - Import from GitHub
-- **Supabase Storage** - Host the static files
+3. Open `index.html` in a browser (no build step needed — it's a plain ES module app).
 
-## ⚠️ Security Notes
+### 3. Make Your First User an Admin
 
-- The **anon/public key** is safe to expose in client-side code. Supabase uses Row Level Security (RLS) to protect data.
-- **Never** expose your `service_role` key in client-side code.
-- Always enable **Row Level Security** on your database tables.
+After registering your first account, go to your Supabase Dashboard → Authentication → Users, copy the user's UUID, then run in the SQL Editor:
 
-## 📄 License
+```sql
+UPDATE profiles SET is_admin = TRUE WHERE id = '<user-uuid>';
+```
 
-MIT License - Feel free to use this for your own projects!
+## Project Structure
+
+```
+├── index.html          # Main HTML (auth card, dashboard, admin panel)
+├── style.css           # All styles (auth, dashboard, admin, modal)
+├── app.js              # Authentication, session, admin logic (ES Module)
+├── supabase-config.js  # Supabase client + version (YOU CREATE THIS — not committed)
+├── package.json        # Project metadata + Playwright dev dependency
+├── playwright.config.js # Playwright E2E test config
+├── tests/
+│   └── auth.spec.ts   # E2E tests for login, registration, session
+└── .gitignore          # Excludes supabase-config.js and other sensitive files
+```
+
+## E2E Tests (Playwright)
+
+This project includes Playwright tests to verify authentication flows.
+
+### Setup
+
+```bash
+npm install
+```
+
+### Run Tests
+
+```bash
+# Run with UI Mode (shows browser + report)
+npx playwright test --ui
+
+# Run headless
+npx playwright test
+
+# Run with video recording on failure
+npx playwright test --reporter=html
+```
+
+> **Note:** Tests require a running Supabase backend with valid credentials configured in `tests/auth.spec.ts`.
+
+## Environment Variables
+
+This app does **not** use `.env` files. Instead, you create a `supabase-config.js` with your credentials directly. This file is excluded from Git via `.gitignore`.
+
+## Tech Stack
+
+- **Frontend**: Vanilla HTML5, CSS3, JavaScript (ES Modules)
+- **Backend**: Supabase (Auth, PostgreSQL)
+- **Testing**: Playwright
+- **No build tools** — runs directly in the browser
+
+## License
+
+MIT

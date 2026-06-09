@@ -1,11 +1,14 @@
 /**
- * Hello World App - Authentication Logic
- * Uses Supabase Auth for real user registration, login, and session management.
- * ES Module - loaded with <script type="module">
+ * Hello World App - Authentication & Admin Logic
+ * Uses Supabase Auth + profiles table for user management.
+ * ES Module - imports from supabase-config.js
  */
 
-// Get supabase client from window (set by inline module script in index.html)
-const supabase = window.supabase;
+import { supabase, APP_VERSION } from './supabase-config.js';
+
+// ===== Version Display =====
+document.getElementById('versionFooter').textContent = 'v' + APP_VERSION;
+document.getElementById('dashboardVersion').textContent = 'v' + APP_VERSION;
 
 // ===== DOM Elements =====
 const authCard = document.getElementById('authCard');
@@ -19,11 +22,28 @@ const registerError = document.getElementById('registerError');
 const registerSuccess = document.getElementById('registerSuccess');
 const displayUsername = document.getElementById('displayUsername');
 
+// Dashboard tabs
+const dashHomeTab = document.getElementById('dashHomeTab');
+const dashAdminTab = document.getElementById('dashAdminTab');
+const dashHome = document.getElementById('dashHome');
+const dashAdmin = document.getElementById('dashAdmin');
+
+// Admin elements
+const adminLoading = document.getElementById('adminLoading');
+const usersTable = document.getElementById('usersTable');
+const usersBody = document.getElementById('usersBody');
+
+// Modal elements
+const confirmModal = document.getElementById('confirmModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalMessage = document.getElementById('modalMessage');
+const modalCancel = document.getElementById('modalCancel');
+const modalConfirm = document.getElementById('modalConfirm');
+
+// Current user profile state
+let currentUserProfile = null;
+
 // ===== Expose functions to window for HTML onclick attributes =====
-/**
- * Switch between Login and Register forms
- * @param {string} tab - 'login' or 'register'
- */
 function switchTab(tab) {
     if (tab === 'login') {
         loginForm.classList.remove('hidden');
@@ -36,19 +56,46 @@ function switchTab(tab) {
         loginTab.classList.remove('active');
         registerTab.classList.add('active');
     }
-
-    // Clear any previous messages
     loginError.textContent = '';
     registerError.textContent = '';
     registerSuccess.textContent = '';
 }
 window.switchTab = switchTab;
 
-// ===== Register =====
 /**
- * Handles user registration via Supabase Auth.
- * @param {Event} event - Form submit event
+ * Switch between Dashboard and Admin tabs
  */
+function switchDashTab(tab) {
+    if (tab === 'admin') {
+        dashHome.classList.add('hidden');
+        dashAdmin.classList.remove('hidden');
+        dashHomeTab.classList.remove('active');
+        dashAdminTab.classList.add('active');
+        loadUsers();
+    } else {
+        dashAdmin.classList.add('hidden');
+        dashHome.classList.remove('hidden');
+        dashAdminTab.classList.remove('active');
+        dashHomeTab.classList.add('active');
+    }
+}
+window.switchDashTab = switchDashTab;
+
+// ===== Fetch User Profile =====
+async function fetchProfile(userId) {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+    if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+    }
+    return data;
+}
+
+// ===== Register =====
 async function registerUser(event) {
     event.preventDefault();
 
@@ -56,45 +103,35 @@ async function registerUser(event) {
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('registerConfirmPassword').value;
 
-    // Clear previous messages
     registerError.textContent = '';
     registerSuccess.textContent = '';
 
-    // Check supabase client is available
     if (!supabase) {
         registerError.textContent = 'Supabase client not initialized. Check console for details.';
         return;
     }
 
-    // Validate: email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         registerError.textContent = 'Please enter a valid email address.';
         return;
     }
 
-    // Validate: password length
     if (password.length < 6) {
         registerError.textContent = 'Password must be at least 6 characters long.';
         return;
     }
 
-    // Validate: passwords match
     if (password !== confirmPassword) {
         registerError.textContent = 'Passwords do not match. Please try again.';
         return;
     }
 
-    console.log('Attempting registration for:', email);
-
     try {
-        // Sign up with Supabase Auth
         const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password
         });
-
-        console.log('Supabase signUp response:', { data, error });
 
         if (error) {
             if (error.message.includes('User already registered')) {
@@ -105,21 +142,16 @@ async function registerUser(event) {
             return;
         }
 
-        // User created successfully - data will be auto-inserted via database trigger
         if (data.user) {
             console.log('New user created with ID:', data.user.id);
-            console.log('User email:', data.user.email);
         }
 
-        // Show success message
         registerSuccess.textContent = 'Account created successfully! You can now login.';
 
-        // Clear form fields
         document.getElementById('registerUsername').value = '';
         document.getElementById('registerPassword').value = '';
         document.getElementById('registerConfirmPassword').value = '';
 
-        // Switch to login tab after a short delay
         setTimeout(() => {
             switchTab('login');
         }, 1500);
@@ -131,35 +163,24 @@ async function registerUser(event) {
 }
 
 // ===== Login =====
-/**
- * Handles user login via Supabase Auth.
- * @param {Event} event - Form submit event
- */
 async function loginUser(event) {
     event.preventDefault();
 
     const email = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    // Clear previous messages
     loginError.textContent = '';
 
-    // Check supabase client is available
     if (!supabase) {
         loginError.textContent = 'Supabase client not initialized. Check console for details.';
         return;
     }
 
-    console.log('Attempting login for:', email);
-
     try {
-        // Sign in with Supabase Auth
         const { data, error } = await supabase.auth.signInWithPassword({
             email: email,
             password: password
         });
-
-        console.log('Supabase signIn response:', { data, error });
 
         if (error) {
             if (error.message.includes('Invalid login credentials')) {
@@ -170,13 +191,14 @@ async function loginUser(event) {
             return;
         }
 
-        // Show dashboard with the user's email
         if (data.user) {
-            const displayName = data.user.email || email;
-            showDashboard(displayName);
+            // Fetch profile to get username and admin status
+            const profile = await fetchProfile(data.user.id);
+            currentUserProfile = profile;
+            const displayName = profile?.username || data.user.email || email;
+            showDashboard(displayName, profile?.is_admin || false);
         }
 
-        // Clear form fields
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
 
@@ -187,9 +209,6 @@ async function loginUser(event) {
 }
 
 // ===== Logout =====
-/**
- * Handles user logout via Supabase Auth.
- */
 async function logout() {
     try {
         if (supabase) {
@@ -199,42 +218,189 @@ async function logout() {
         console.error('Error during logout:', err);
     }
 
-    // Clear login error
+    currentUserProfile = null;
     loginError.textContent = '';
 
-    // Switch to auth card with login form visible
     dashboardCard.classList.add('hidden');
     authCard.classList.remove('hidden');
 
-    // Reset to login tab
+    // Reset dashboard tabs
+    dashHome.classList.remove('hidden');
+    dashAdmin.classList.add('hidden');
+    dashHomeTab.classList.add('active');
+    dashAdminTab.classList.remove('active');
+
     switchTab('login');
 }
 window.logout = logout;
 
 // ===== Show Dashboard =====
-/**
- * Displays the dashboard with the user's greeting.
- * @param {string} name - The logged-in user's display name (email)
- */
-function showDashboard(name) {
+function showDashboard(name, isAdmin) {
     displayUsername.textContent = name;
     authCard.classList.add('hidden');
     dashboardCard.classList.remove('hidden');
+
+    // Show admin tab only for admins
+    if (isAdmin) {
+        dashAdminTab.classList.remove('hidden');
+    } else {
+        dashAdminTab.classList.add('hidden');
+    }
+
+    // Ensure home tab is active
+    switchDashTab('home');
 }
 
 // ===== Show Auth Card =====
-/**
- * Displays the authentication card (login/register forms).
- */
 function showAuthCard() {
     dashboardCard.classList.add('hidden');
     authCard.classList.remove('hidden');
 }
 
+// ===== Load Users (Admin) =====
+async function loadUsers() {
+    adminLoading.classList.remove('hidden');
+    usersTable.classList.add('hidden');
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, username, is_admin, created_at')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Error loading users:', error);
+        adminLoading.textContent = 'Error loading users.';
+        return;
+    }
+
+    adminLoading.classList.add('hidden');
+    usersTable.classList.remove('hidden');
+
+    usersBody.innerHTML = '';
+
+    for (const user of data) {
+        const tr = document.createElement('tr');
+
+        // Email
+        const emailTd = document.createElement('td');
+        emailTd.textContent = user.email || '—';
+        tr.appendChild(emailTd);
+
+        // Username
+        const usernameTd = document.createElement('td');
+        usernameTd.textContent = user.username || '—';
+        tr.appendChild(usernameTd);
+
+        // Created
+        const createdTd = document.createElement('td');
+        createdTd.textContent = new Date(user.created_at).toLocaleDateString();
+        tr.appendChild(createdTd);
+
+        // Admin toggle
+        const adminTd = document.createElement('td');
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toggle-switch';
+        toggleBtn.textContent = user.is_admin ? 'ON' : 'OFF';
+        if (user.is_admin) toggleBtn.classList.add('active');
+        toggleBtn.onclick = () => toggleAdmin(user.id, !user.is_admin);
+        adminTd.appendChild(toggleBtn);
+        tr.appendChild(adminTd);
+
+        // Actions
+        const actionsTd = document.createElement('td');
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => confirmDelete(user.id, user.email || user.username);
+        actionsTd.appendChild(deleteBtn);
+        tr.appendChild(actionsTd);
+
+        usersBody.appendChild(tr);
+    }
+}
+
+// ===== Toggle Admin Role =====
+async function toggleAdmin(userId, newRole) {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: newRole })
+        .eq('id', userId);
+
+    if (error) {
+        console.error('Error toggling admin:', error);
+        alert('Failed to update admin status.');
+        return;
+    }
+
+    // If toggling own role, update local state
+    const session = await supabase.auth.getSession();
+    if (session.data?.session?.user?.id === userId) {
+        currentUserProfile.is_admin = newRole;
+        if (!newRole) {
+            // Demote self → show home tab, hide admin tab
+            dashAdminTab.classList.add('hidden');
+            switchDashTab('home');
+        } else {
+            dashAdminTab.classList.remove('hidden');
+        }
+    }
+
+    // Reload the table
+    loadUsers();
+}
+
+// ===== Confirm Delete Modal =====
+let pendingDeleteId = null;
+
+function confirmDelete(userId, displayName) {
+    modalTitle.textContent = 'Delete User';
+    modalMessage.textContent = `Are you sure you want to delete "${displayName}"? This cannot be undone.`;
+    pendingDeleteId = userId;
+    confirmModal.classList.remove('hidden');
+}
+
+modalCancel.onclick = () => {
+    confirmModal.classList.add('hidden');
+    pendingDeleteId = null;
+};
+
+modalConfirm.onclick = async () => {
+    confirmModal.classList.add('hidden');
+    if (!pendingDeleteId) return;
+
+    await deleteUser(pendingDeleteId);
+    pendingDeleteId = null;
+};
+
+// Close modal on overlay click
+confirmModal.onclick = (e) => {
+    if (e.target === confirmModal) {
+        confirmModal.classList.add('hidden');
+        pendingDeleteId = null;
+    }
+};
+
+// ===== Delete User =====
+async function deleteUser(userId) {
+    const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+    if (error) {
+        console.error('Error deleting user:', error);
+        alert('Failed to delete user.');
+        return;
+    }
+
+    // Also delete the auth user
+    await supabase.auth.admin.deleteUser(userId);
+
+    // Reload table
+    loadUsers();
+}
+
 // ===== Check Session on Page Load =====
-/**
- * On page load, checks if there is an active Supabase session.
- */
 async function checkSession() {
     if (!supabase) {
         console.error('Cannot check session: Supabase client not initialized.');
@@ -246,29 +412,30 @@ async function checkSession() {
         const { data, error } = await supabase.auth.getSession();
 
         if (data && data.session && data.session.user) {
-            const displayName = data.session.user.email || data.session.user.id;
-            showDashboard(displayName);
+            const profile = await fetchProfile(data.session.user.id);
+            currentUserProfile = profile;
+            const displayName = profile?.username || data.session.user.email || data.session.user.id;
+            showDashboard(displayName, profile?.is_admin || false);
             return;
         }
     } catch (err) {
         console.error('Error checking session:', err);
     }
 
-    // No valid session, show auth card
     showAuthCard();
 }
 
 // ===== Listen for Auth State Changes =====
-/**
- * Listens for Supabase auth state changes (e.g., logout from another tab).
- */
 if (supabase) {
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_OUT') {
+            currentUserProfile = null;
             showAuthCard();
         } else if (event === 'SIGNED_IN' && session) {
-            const displayName = session.user.email || session.user.id;
-            showDashboard(displayName);
+            const profile = await fetchProfile(session.user.id);
+            currentUserProfile = profile;
+            const displayName = profile?.username || session.user.email || session.user.id;
+            showDashboard(displayName, profile?.is_admin || false);
         }
     });
 }

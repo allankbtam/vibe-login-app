@@ -53,31 +53,72 @@
                 <p class="form-success" id="registerSuccess"></p>
                 <button type="submit" class="auth-btn">Register</button>
             </form>
+
+            <!-- Version Footer -->
+            <div class="auth-card-footer">
+                <span id="versionFooter">v0.1.0</span>
+            </div>
         </div>
 
         <!-- Dashboard (shown when logged in) -->
         <div class="dashboard-card hidden" id="dashboardCard">
-            <div class="dashboard-content">
-                <div class="greeting-icon">👋</div>
-                <h1 class="greeting-title">Hello World, <span class="username-highlight" id="displayUsername"></span>!</h1>
-                <p class="dashboard-subtitle">You are successfully logged in. Welcome to your dashboard.</p>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+            <!-- Dashboard Tabs -->
+            <div class="dashboard-tabs">
+                <button class="dash-tab active" id="dashHomeTab" onclick="switchDashTab('home')">Dashboard</button>
+                <button class="dash-tab hidden" id="dashAdminTab" onclick="switchDashTab('admin')">Admin</button>
+            </div>
+
+            <!-- Home Tab Content -->
+            <div class="dash-content" id="dashHome">
+                <div class="dashboard-content">
+                    <div class="greeting-icon">👋</div>
+                    <h1 class="greeting-title">Hello World, <span class="username-highlight" id="displayUsername"></span>!</h1>
+                    <p class="dashboard-subtitle">You are successfully logged in. Welcome to your dashboard.</p>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <!-- Admin Tab Content -->
+            <div class="dash-content hidden" id="dashAdmin">
+                <div class="admin-panel">
+                    <h2>User Management</h2>
+                    <div id="adminLoading" class="admin-loading">Loading users...</div>
+                    <table class="admin-table hidden" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Username</th>
+                                <th>Created</th>
+                                <th>Admin</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Version Footer -->
+            <div class="dashboard-footer">
+                <span id="dashboardVersion">v0.1.0</span>
             </div>
         </div>
     </div>
 
-    <!-- Supabase Configuration (ES Module - imports from esm.sh CDN) -->
-    <script type="module">
-        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay hidden" id="confirmModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Confirm Action</h3>
+            <p id="modalMessage">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn danger" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
 
-        const SUPABASE_URL = 'https://stjxenrwjidgesvytggl.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable__yZuA6ecv6WUbIPRbdBhTA_4bji5JSY';
-
-        window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('Supabase client initialized successfully via ES module.');
-    </script>
-
-    <!-- App Logic (ES Module) -->
+    <!-- App Logic (ES Module - imports from config) -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
